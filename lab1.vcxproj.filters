@@ -46,9 +46,4 @@
       <Filter>Файлы ресурсов</Filter>
     </Image>
   </ItemGroup>
-  <ItemGroup>
-    <Text Include="lab1_m.txt">
-      <Filter>Файлы ресурсов</Filter>
-    </Text>
-  </ItemGroup>
 </Project>

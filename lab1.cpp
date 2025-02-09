@@ -330,7 +330,6 @@ void Render()
 {
     g_pd3dDeviceContext->ClearState();
 
-
     ID3D11RenderTargetView* views[] = { g_pRenderTargetView };
     g_pd3dDeviceContext->OMSetRenderTargets(1, views, nullptr);
 
