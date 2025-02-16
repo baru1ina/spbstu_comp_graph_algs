@@ -579,9 +579,6 @@ HRESULT InitScene()
         if (SUCCEEDED(result))
         {
             result = SetResourceName(m_pInputLayout, "InputLayout");
-
-            //const std::string& name = "InputLayout";
-            //result = m_pInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
         }
     }
 

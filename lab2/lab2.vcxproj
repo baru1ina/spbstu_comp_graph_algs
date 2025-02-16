@@ -148,8 +148,13 @@
     <Text Include="lab2.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="SimpleColor.ps" />
-    <None Include="SimpleColor.vs" />
+    <None Include=".gitignore" />
+    <CopyFileToFolders Include="SimpleColor.ps">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="SimpleColor.vs">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

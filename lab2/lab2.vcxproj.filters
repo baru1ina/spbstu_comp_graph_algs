@@ -52,7 +52,10 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <None Include="SimpleColor.ps" />
-    <None Include="SimpleColor.vs" />
+    <None Include=".gitignore" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="SimpleColor.vs" />
+    <CopyFileToFolders Include="SimpleColor.ps" />
   </ItemGroup>
 </Project>
