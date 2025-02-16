@@ -138,7 +138,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             {
                 pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
             }
-
+            pDebug->Release();
             SAFE_RELEASE(pDebug);
         }
     }
@@ -409,6 +409,7 @@ HRESULT InitDirectX(HWND hWnd)
                 {
                     pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
                 }
+                pDebug->Release();
 
                 SAFE_RELEASE(pDebug);
             }
@@ -676,9 +677,6 @@ HRESULT CompileAndCreateShader(const std::wstring& path, ID3D11DeviceChild** ppS
     {
         result = SetResourceName(*ppShader, WCSToMBS(path).c_str());
 
-        //const std::string& name = WCSToMBS(path).c_str();
-        //ID3D11DeviceChild* pResource = *ppShader;
-        //result = pResource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
     }
 
     if (ppCode)
