@@ -89,7 +89,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-   HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LAB2));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LAB2));
 
     MSG msg;
 
@@ -410,7 +410,6 @@ HRESULT InitDirectX(HWND hWnd)
                     pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
                 }
                 pDebug->Release();
-
                 SAFE_RELEASE(pDebug);
             }
         }

@@ -46,16 +46,4 @@
       <Filter>Файлы ресурсов</Filter>
     </Image>
   </ItemGroup>
-  <ItemGroup>
-    <Text Include="lab2.txt">
-      <Filter>Файлы ресурсов</Filter>
-    </Text>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include=".gitignore" />
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="SimpleColor.vs" />
-    <CopyFileToFolders Include="SimpleColor.ps" />
-  </ItemGroup>
 </Project>
