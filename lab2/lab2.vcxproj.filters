@@ -46,4 +46,8 @@
       <Filter>Файлы ресурсов</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="SimpleColor.ps" />
+    <CopyFileToFolders Include="SimpleColor.vs" />
+  </ItemGroup>
 </Project>

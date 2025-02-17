@@ -65,8 +65,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     size_t configPos = dir.find(L"x64");
     if (configPos != std::wstring::npos)
     {
-        dir.resize(configPos);
-        dir += szTitle;
         SetCurrentDirectory(dir.c_str());
     }
 
