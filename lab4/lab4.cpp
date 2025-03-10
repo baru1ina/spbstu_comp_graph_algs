@@ -1075,7 +1075,17 @@ void Term()
     SAFE_RELEASE(g_pSwapChain);
     SAFE_RELEASE(g_pd3dDeviceContext);
     SAFE_RELEASE(pDepthStencilView);
-
+    SAFE_RELEASE(m_pTexture);
+    SAFE_RELEASE(m_pTextureView);
+    SAFE_RELEASE(m_pSampler);
+    SAFE_RELEASE(m_pCubemapTexture);
+    SAFE_RELEASE(m_pCubemapView);
+    SAFE_RELEASE(m_pSphereGeomBuffer);
+    SAFE_RELEASE(m_pSphereVertexBuffer);
+    SAFE_RELEASE(m_pSphereIndexBuffer);
+    SAFE_RELEASE(m_pSphereVertexShader);
+    SAFE_RELEASE(m_pSpherePixelShader);
+    SAFE_RELEASE(m_pSphereInputLayout);
 
 #ifdef _DEBUG
     if (g_pd3dDevice != nullptr)
@@ -1085,7 +1095,7 @@ void Term()
         assert(SUCCEEDED(result));
         if (pDebug != nullptr)
         {
-            if (pDebug->AddRef() != 3) // ID3D11Device && ID3D11Debug && after AddRef()
+            if (pDebug->AddRef() != 3) 
             {
                 pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
             }
