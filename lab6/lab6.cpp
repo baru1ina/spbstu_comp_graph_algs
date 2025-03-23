@@ -1041,6 +1041,22 @@ HRESULT InitScene()
             result = SetResourceName(m_pRasterizerState, "RasterizerState");
         }
     }
+    if (SUCCEEDED(result))
+    {
+        ID3D11DepthStencilState* pDepthStencilState = nullptr;
+        D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
+        depthStencilDesc.DepthEnable = TRUE;
+        depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+        depthStencilDesc.StencilEnable = FALSE;
+
+        result = g_pd3dDevice->CreateDepthStencilState(&depthStencilDesc, &pDepthStencilState);
+        assert(SUCCEEDED(result));
+
+        g_pd3dDeviceContext->OMSetDepthStencilState(pDepthStencilState, 0);
+
+        SAFE_RELEASE(pDepthStencilState);
+    }
 
     // Create blend states
     if (SUCCEEDED(result))
@@ -1474,28 +1490,23 @@ void Term()
     ImGui::DestroyContext();
 
     SAFE_RELEASE(m_pRasterizerState);
-
     SAFE_RELEASE(m_pDepthState);
     SAFE_RELEASE(m_pTransDepthState);
-
     SAFE_RELEASE(m_pInputLayout);
     SAFE_RELEASE(m_pPixelShader);
     SAFE_RELEASE(m_pVertexShader);
 
     SAFE_RELEASE(m_pIndexBuffer);
     SAFE_RELEASE(m_pVertexBuffer);
-
     SAFE_RELEASE(m_pSceneBuffer);
     SAFE_RELEASE(m_pGeomBuffer);
     SAFE_RELEASE(m_pGeomBuffer2);
 
     SAFE_RELEASE(m_pTransBlendState);
     SAFE_RELEASE(m_pOpaqueBlendState);
-
     SAFE_RELEASE(g_pRenderTargetView);
     SAFE_RELEASE(g_pSwapChain);
     SAFE_RELEASE(g_pd3dDeviceContext);
-    //SAFE_RELEASE(pDepthStencilView);
 
     SAFE_RELEASE(m_pTexture);
     SAFE_RELEASE(m_pTextureView);
@@ -1512,20 +1523,16 @@ void Term()
     SAFE_RELEASE(m_pRectInputLayout);
     SAFE_RELEASE(m_pRectPixelShader);
     SAFE_RELEASE(m_pRectVertexShader);
-
     SAFE_RELEASE(m_pRectIndexBuffer);
     SAFE_RELEASE(m_pRectVertexBuffer);
-
     SAFE_RELEASE(m_pRectGeomBuffer);
     SAFE_RELEASE(m_pRectGeomBuffer2);
 
     SAFE_RELEASE(m_pDepthBuffer);
     SAFE_RELEASE(m_pDepthBufferDSV);
-
     SAFE_RELEASE(m_pTextureViewNM);
     SAFE_RELEASE(m_pTextureNM);
 
-    // Term small sphere
     SAFE_RELEASE(m_pSmallSphereIndexBuffer);
     SAFE_RELEASE(m_pSmallSphereVertexBuffer);
     SAFE_RELEASE(m_pSmallSphereInputLayout);
@@ -1544,11 +1551,12 @@ void Term()
         assert(SUCCEEDED(result));
         if (pDebug != nullptr)
         {
-            if (pDebug->AddRef() != 3)
+            if (pDebug->AddRef() != 3) // ID3D11Device && ID3D11Debug && after AddRef()
             {
                 pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
             }
             pDebug->Release();
+
             SAFE_RELEASE(pDebug);
         }
     }
