@@ -1993,6 +1993,9 @@ HRESULT InitCubemap()
 {
     HRESULT result = S_OK;
 
+    SAFE_RELEASE(m_pCubemapView);
+    SAFE_RELEASE(m_pCubemapTexture);
+
     DXGI_FORMAT textureFmt;
     if (SUCCEEDED(result))
     {
