@@ -187,8 +187,8 @@ struct SceneBuffer
 {
     DirectX::XMMATRIX vp;
     Point4f cameraPos;
-    Point4i lightCount; // x - light count (max 10), y - use normal maps, z - show normals, w - do culling
-    Point4i postProcess; // x - use sepia
+    Point4i lightCount;
+    Point4i postProcess; 
     Light lights[10];
     Point4f ambientColor;
 };

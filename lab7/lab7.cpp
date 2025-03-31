@@ -22,9 +22,6 @@ ID3D11DepthStencilState* m_pTransDepthState = nullptr;
 
 ID3D11Buffer* m_pSceneBuffer = nullptr;
 
-//ID3D11Buffer* m_pGeomBuffer = nullptr;
-//ID3D11Buffer* m_pGeomBuffer2 = nullptr;
-
 ID3D11Buffer* m_pGeomBufferInst = nullptr;
 ID3D11Buffer* m_pGeomBufferInstVis = nullptr;
 
@@ -125,7 +122,6 @@ std::vector<AABB> m_geomBBs{ MaxInst };
 UINT m_instCount = 2;
 UINT m_visibleInstances = 0;
 
-// Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
@@ -300,7 +296,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         SetCurrentDirectory(dir.c_str());
     }
 
-    // Perform application initialization:
     if (!InitInstance(hInstance, nCmdShow))
     {
         return FALSE;
@@ -352,11 +347,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 }
 
 
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -379,16 +369,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 }
 
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
     hInst = hInstance; // Store instance handle in our global variable
@@ -423,16 +403,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 }
 
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE: Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
@@ -529,7 +499,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 
-// Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -616,6 +585,7 @@ HRESULT SetupBackBuffer()
             result = SetResourceName(m_pColorBuffer, "ColorBuffer");
         }
     }
+
     if (SUCCEEDED(result))
     {
         result = g_pd3dDevice->CreateRenderTargetView(m_pColorBuffer, nullptr, &m_pColorBufferRTV);
@@ -830,6 +800,8 @@ bool Render()
     RenderSphere();
     RenderRects();
 
+    RenderPostProcess();
+
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
@@ -845,7 +817,8 @@ bool Render()
         m_sceneBuffer.lightCount.y = m_useNormalMaps ? 1 : 0;
         m_sceneBuffer.lightCount.z = m_showNormals ? 1 : 0;
         m_sceneBuffer.lightCount.w = m_doCull ? 1 : 0;
-        m_sceneBuffer.postProcess.x = m_useBlackWhiteFilter ? 1 : 0;
+        m_sceneBuffer.postProcess.x = m_useBlackWhiteFilter ? 1.0f : 0.0f;
+        m_sceneBuffer.postProcess.y = m_useContrastFilter ? 1.5f : 1.0f;
 
         bool add = ImGui::Button("+");
         ImGui::SameLine();
@@ -878,8 +851,9 @@ bool Render()
         remove = ImGui::Button("-");
         ImGui::Text("Count %d", m_instCount);
         ImGui::Text("Visible %d", m_visibleInstances);
-        ImGui::Checkbox("Cull", &m_doCull);
+        //ImGui::Checkbox("Cull", &m_doCull);
         ImGui::End();
+
         if (add && m_instCount < MaxInst)
         {
             Point4f pos = m_geomBuffers[m_instCount].posAngle;
@@ -896,12 +870,6 @@ bool Render()
     }
 
     ImGui::Render();
-
-    if (m_useBlackWhiteFilter || m_useContrastFilter)
-    {
-        RenderPostProcess(); 
-    }
-
     g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
@@ -1516,11 +1484,14 @@ HRESULT CompileAndCreateShader(const std::wstring& path, ID3D11DeviceChild** ppS
     ID3DBlob* pCode = nullptr;
     ID3DBlob* pErrMsg = nullptr;
     HRESULT result = D3DCompile(data.data(), data.size(), WCSToMBS(path).c_str(), shaderDefines.data(), &includeHandler, entryPoint.c_str(), platform.c_str(), flags1, 0, &pCode, &pErrMsg);
+
     if (!SUCCEEDED(result) && pErrMsg != nullptr)
     {
         OutputDebugStringA((const char*)pErrMsg->GetBufferPointer());
+        SAFE_RELEASE(pErrMsg);
+        SAFE_RELEASE(pCode);
+        return result;
     }
-    assert(SUCCEEDED(result));
     SAFE_RELEASE(pErrMsg);
 
     if (SUCCEEDED(result))
@@ -1533,6 +1504,11 @@ HRESULT CompileAndCreateShader(const std::wstring& path, ID3D11DeviceChild** ppS
             {
                 *ppShader = pVertexShader;
             }
+            else
+            {
+                SAFE_RELEASE(pCode);
+                return result;
+            }
         }
         else if (ext == L"ps")
         {
@@ -1542,11 +1518,22 @@ HRESULT CompileAndCreateShader(const std::wstring& path, ID3D11DeviceChild** ppS
             {
                 *ppShader = pPixelShader;
             }
+            else
+            {
+                SAFE_RELEASE(pCode);
+                return result;
+            }
         }
     }
+
     if (SUCCEEDED(result))
     {
         result = SetResourceName(*ppShader, WCSToMBS(path).c_str());
+        if (FAILED(result))
+        {
+            SAFE_RELEASE(pCode);
+            return result;
+        }
     }
 
     if (ppCode)
@@ -1555,7 +1542,7 @@ HRESULT CompileAndCreateShader(const std::wstring& path, ID3D11DeviceChild** ppS
     }
     else
     {
-        pCode->Release();
+        SAFE_RELEASE(pCode);
     }
 
     return result;
@@ -1650,6 +1637,14 @@ void Term()
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
+    SAFE_RELEASE(m_pTexture);
+    SAFE_RELEASE(m_pTextureView);
+    SAFE_RELEASE(m_pTextureNM);
+    SAFE_RELEASE(m_pTextureViewNM);
+
+    SAFE_RELEASE(m_pCubemapTexture);
+    SAFE_RELEASE(m_pCubemapView);
+
     SAFE_RELEASE(m_pRasterizerState);
     SAFE_RELEASE(m_pDepthState);
     SAFE_RELEASE(m_pTransDepthState);
@@ -1661,8 +1656,6 @@ void Term()
     SAFE_RELEASE(m_pVertexBuffer);
     SAFE_RELEASE(m_pSceneBuffer);
 
- /*   SAFE_RELEASE(m_pGeomBuffer);
-    SAFE_RELEASE(m_pGeomBuffer2);*/
     SAFE_RELEASE(m_pGeomBufferInst);
     SAFE_RELEASE(m_pGeomBufferInstVis);
 
@@ -1672,11 +1665,7 @@ void Term()
     SAFE_RELEASE(g_pSwapChain);
     SAFE_RELEASE(g_pd3dDeviceContext);
 
-    SAFE_RELEASE(m_pTexture);
-    SAFE_RELEASE(m_pTextureView);
     SAFE_RELEASE(m_pSampler);
-    SAFE_RELEASE(m_pCubemapTexture);
-    SAFE_RELEASE(m_pCubemapView);
     SAFE_RELEASE(m_pSphereGeomBuffer);
     SAFE_RELEASE(m_pSphereVertexBuffer);
     SAFE_RELEASE(m_pSphereIndexBuffer);
@@ -1694,10 +1683,7 @@ void Term()
 
     SAFE_RELEASE(m_pDepthBuffer);
     SAFE_RELEASE(m_pDepthBufferDSV);
-    SAFE_RELEASE(m_pTextureViewNM);
-    SAFE_RELEASE(m_pTextureNM);
 
-    // Освобождение памяти малых сфер
     SAFE_RELEASE(m_pSmallSphereIndexBuffer);
     SAFE_RELEASE(m_pSmallSphereVertexBuffer);
     SAFE_RELEASE(m_pSmallSphereInputLayout);
@@ -1732,10 +1718,14 @@ void Term()
             }
             pDebug->Release();
 
-            SAFE_RELEASE(pDebug);
+            if (pDebug != nullptr)
+            {
+                pDebug->Release();
+                pDebug = nullptr;
+            }
         }
     }
-#endif // _DEBUG
+#endif 
 
     SAFE_RELEASE(g_pd3dDevice);
 }
@@ -2008,9 +1998,6 @@ HRESULT InitCubemap()
     {
         const std::wstring TextureNames[6] =
         {
-            //L"source/px.dds", L"source/nx.dds",
-            //L"source/py.dds", L"source/ny.dds",
-            //L"source/pz.dds", L"source/nz.dds"
             L"px.dds", L"nx.dds",
             L"py.dds", L"ny.dds",
             L"pz.dds", L"nz.dds"
@@ -2233,33 +2220,19 @@ HRESULT InitPostProcess()
 {
     HRESULT result = S_OK;
 
-    // Добавьте вывод для отладки
-    OutputDebugString(L"Loading BlackWhite.vs...\n");
     result = CompileAndCreateShader(L"BlackWhite.vs", (ID3D11DeviceChild**)&m_pBlackWhiteVertexShader);
-    if (FAILED(result)) {
-        MessageBox(NULL, L"Failed to compile BlackWhite vertex shader", L"Error", MB_OK);
-        return result;
+    if (SUCCEEDED(result))
+    {
+        result = CompileAndCreateShader(L"BlackWhite.ps", (ID3D11DeviceChild**)&m_pBlackWhitePixelShader);
     }
 
-    OutputDebugString(L"Loading BlackWhite.ps...\n");
-    result = CompileAndCreateShader(L"BlackWhite.ps", (ID3D11DeviceChild**)&m_pBlackWhitePixelShader);
-    if (FAILED(result)) {
-        MessageBox(NULL, L"Failed to compile BlackWhite pixel shader", L"Error", MB_OK);
-        return result;
+    if (SUCCEEDED(result))
+    {
+        result = CompileAndCreateShader(L"Contrast.vs", (ID3D11DeviceChild**)&m_pContrastVertexShader);
     }
-
-    OutputDebugString(L"Loading Contrast.vs...\n");
-    result = CompileAndCreateShader(L"Contrast.vs", (ID3D11DeviceChild**)&m_pContrastVertexShader);
-    if (FAILED(result)) {
-        MessageBox(NULL, L"Failed to compile Contrast vertex shader", L"Error", MB_OK);
-        return result;
-    }
-
-    OutputDebugString(L"Loading Contrast.ps...\n");
-    result = CompileAndCreateShader(L"Contrast.ps", (ID3D11DeviceChild**)&m_pContrastPixelShader);
-    if (FAILED(result)) {
-        MessageBox(NULL, L"Failed to compile Contrast pixel shader", L"Error", MB_OK);
-        return result;
+    if (SUCCEEDED(result))
+    {
+        result = CompileAndCreateShader(L"Contrast.ps", (ID3D11DeviceChild**)&m_pContrastPixelShader);
     }
 
     return result;
@@ -2460,96 +2433,81 @@ void InitGeom(GeomBuffer& geomBuffer, AABB& bb)
 
 void RenderPostProcess()
 {
+    ID3D11RenderTargetView* oldRTV = nullptr;
+    ID3D11DepthStencilView* oldDSV = nullptr;
+    g_pd3dDeviceContext->OMGetRenderTargets(1, &oldRTV, &oldDSV);
+
+    ID3D11ShaderResourceView* oldSRV = nullptr;
+    g_pd3dDeviceContext->PSGetShaderResources(0, 1, &oldSRV);
+
+    ID3D11SamplerState* oldSampler = nullptr;
+    g_pd3dDeviceContext->PSGetSamplers(0, 1, &oldSampler);
+
     if (m_useBlackWhiteFilter || m_useContrastFilter)
     {
-        ID3D11RenderTargetView* oldRTV = nullptr;
-        ID3D11DepthStencilView* oldDSV = nullptr;
-        g_pd3dDeviceContext->OMGetRenderTargets(1, &oldRTV, &oldDSV);
-
-        ID3D11ShaderResourceView* oldSRV = nullptr;
-        g_pd3dDeviceContext->PSGetShaderResources(0, 1, &oldSRV);
-
-        ID3D11SamplerState* oldSampler = nullptr;
-        g_pd3dDeviceContext->PSGetSamplers(0, 1, &oldSampler);
-
-        ID3D11VertexShader* oldVS = nullptr;
-        ID3D11PixelShader* oldPS = nullptr;
-        g_pd3dDeviceContext->VSGetShader(&oldVS, nullptr, nullptr);
-        g_pd3dDeviceContext->PSGetShader(&oldPS, nullptr, nullptr);
-
         ID3D11Texture2D* pTempTexture = nullptr;
         ID3D11RenderTargetView* pTempRTV = nullptr;
         ID3D11ShaderResourceView* pTempSRV = nullptr;
 
         D3D11_TEXTURE2D_DESC desc;
         m_pColorBuffer->GetDesc(&desc);
-        g_pd3dDevice->CreateTexture2D(&desc, nullptr, &pTempTexture);
-        g_pd3dDevice->CreateRenderTargetView(pTempTexture, nullptr, &pTempRTV);
-        g_pd3dDevice->CreateShaderResourceView(pTempTexture, nullptr, &pTempSRV);
-
-        g_pd3dDeviceContext->CopyResource(pTempTexture, m_pColorBuffer);
-
-        g_pd3dDeviceContext->OMSetDepthStencilState(nullptr, 0);
-        g_pd3dDeviceContext->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-
-        ID3D11SamplerState* samplers[] = { m_pSampler };
-        g_pd3dDeviceContext->PSSetSamplers(0, 1, samplers);
-
-        if (m_useBlackWhiteFilter && m_useContrastFilter)
+        if (SUCCEEDED(g_pd3dDevice->CreateTexture2D(&desc, nullptr, &pTempTexture)))
         {
-            g_pd3dDeviceContext->OMSetRenderTargets(1, &pTempRTV, nullptr);
-            ID3D11ShaderResourceView* resourcesBW[] = { m_pColorBufferSRV };
-            g_pd3dDeviceContext->PSSetShaderResources(0, 1, resourcesBW);
+            g_pd3dDevice->CreateRenderTargetView(pTempTexture, nullptr, &pTempRTV);
+            g_pd3dDevice->CreateShaderResourceView(pTempTexture, nullptr, &pTempSRV);
 
-            g_pd3dDeviceContext->VSSetShader(m_pBlackWhiteVertexShader, nullptr, 0);
-            g_pd3dDeviceContext->PSSetShader(m_pBlackWhitePixelShader, nullptr, 0);
-            g_pd3dDeviceContext->Draw(3, 0);
+            g_pd3dDeviceContext->CopyResource(pTempTexture, m_pColorBuffer);
 
-            g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
-            ID3D11ShaderResourceView* resourcesContrast[] = { pTempSRV };
-            g_pd3dDeviceContext->PSSetShaderResources(0, 1, resourcesContrast);
+            g_pd3dDeviceContext->OMSetDepthStencilState(nullptr, 0);
+            g_pd3dDeviceContext->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
 
-            g_pd3dDeviceContext->VSSetShader(m_pContrastVertexShader, nullptr, 0);
-            g_pd3dDeviceContext->PSSetShader(m_pContrastPixelShader, nullptr, 0);
-            g_pd3dDeviceContext->Draw(3, 0);
-        }
-        else if (m_useBlackWhiteFilter)
-        {
-            g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
-            ID3D11ShaderResourceView* resources[] = { m_pColorBufferSRV };
-            g_pd3dDeviceContext->PSSetShaderResources(0, 1, resources);
+            if (m_pSampler) {
+                ID3D11SamplerState* samplers[] = { m_pSampler };
+                g_pd3dDeviceContext->PSSetSamplers(0, 1, samplers);
+            }
 
-            g_pd3dDeviceContext->VSSetShader(m_pBlackWhiteVertexShader, nullptr, 0);
-            g_pd3dDeviceContext->PSSetShader(m_pBlackWhitePixelShader, nullptr, 0);
-            g_pd3dDeviceContext->Draw(3, 0);
-        }
-        else if (m_useContrastFilter)
-        {
-            g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
-            ID3D11ShaderResourceView* resources[] = { m_pColorBufferSRV };
-            g_pd3dDeviceContext->PSSetShaderResources(0, 1, resources);
+            if (m_useBlackWhiteFilter && m_pBlackWhiteVertexShader && m_pBlackWhitePixelShader)
+            {
+                g_pd3dDeviceContext->OMSetRenderTargets(1, &pTempRTV, nullptr);
+                g_pd3dDeviceContext->PSSetShaderResources(0, 1, &m_pColorBufferSRV);
+                g_pd3dDeviceContext->VSSetShader(m_pBlackWhiteVertexShader, nullptr, 0);
+                g_pd3dDeviceContext->PSSetShader(m_pBlackWhitePixelShader, nullptr, 0);
+                g_pd3dDeviceContext->Draw(3, 0);
 
-            g_pd3dDeviceContext->VSSetShader(m_pContrastVertexShader, nullptr, 0);
-            g_pd3dDeviceContext->PSSetShader(m_pContrastPixelShader, nullptr, 0);
-            g_pd3dDeviceContext->Draw(3, 0);
+                if (!m_useContrastFilter)
+                {
+                    g_pd3dDeviceContext->CopyResource(m_pColorBuffer, pTempTexture);
+                    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
+                    g_pd3dDeviceContext->PSSetShaderResources(0, 1, &m_pColorBufferSRV);
+                    g_pd3dDeviceContext->Draw(3, 0);
+                }
+            }
+
+            if (m_useContrastFilter && m_pContrastVertexShader && m_pContrastPixelShader)
+            {
+                ID3D11ShaderResourceView* src = m_useBlackWhiteFilter ? pTempSRV : m_pColorBufferSRV;
+                g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
+                g_pd3dDeviceContext->PSSetShaderResources(0, 1, &src);
+                g_pd3dDeviceContext->VSSetShader(m_pContrastVertexShader, nullptr, 0);
+                g_pd3dDeviceContext->PSSetShader(m_pContrastPixelShader, nullptr, 0);
+                g_pd3dDeviceContext->Draw(3, 0);
+            }
         }
 
-        ID3D11ShaderResourceView* nullResources[] = { nullptr };
-        g_pd3dDeviceContext->PSSetShaderResources(0, 1, nullResources);
-        g_pd3dDeviceContext->OMSetRenderTargets(1, &oldRTV, oldDSV);
-        g_pd3dDeviceContext->PSSetShaderResources(0, 1, &oldSRV);
-        g_pd3dDeviceContext->PSSetSamplers(0, 1, &oldSampler);
-        g_pd3dDeviceContext->VSSetShader(oldVS, nullptr, 0);
-        g_pd3dDeviceContext->PSSetShader(oldPS, nullptr, 0);
-
-        SAFE_RELEASE(pTempTexture);
-        SAFE_RELEASE(pTempRTV);
         SAFE_RELEASE(pTempSRV);
-        SAFE_RELEASE(oldRTV);
-        SAFE_RELEASE(oldDSV);
-        SAFE_RELEASE(oldSRV);
-        SAFE_RELEASE(oldSampler);
-        SAFE_RELEASE(oldVS);
-        SAFE_RELEASE(oldPS);
+        SAFE_RELEASE(pTempRTV);
+        SAFE_RELEASE(pTempTexture);
     }
+
+    g_pd3dDeviceContext->OMSetRenderTargets(1, &oldRTV, oldDSV);
+    g_pd3dDeviceContext->PSSetShaderResources(0, 1, oldSRV ? &oldSRV : nullptr);
+    if (oldSampler) {
+        ID3D11SamplerState* samplers[] = { oldSampler };
+        g_pd3dDeviceContext->PSSetSamplers(0, 1, samplers);
+    }
+
+    SAFE_RELEASE(oldRTV);
+    SAFE_RELEASE(oldDSV);
+    SAFE_RELEASE(oldSRV);
+    SAFE_RELEASE(oldSampler);
 }

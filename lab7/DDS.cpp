@@ -208,7 +208,7 @@ bool LoadDDS(const std::wstring& filepath, TextureDesc& desc, bool singleMip)
         return false;
     }
 
-    fclose(pFile);
+    if (pFile) fclose(pFile);
 
     return true;
 }
